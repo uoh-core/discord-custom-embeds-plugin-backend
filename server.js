@@ -133,17 +133,13 @@ app.get("/embed", (req, res) => {
   // Build image size meta tags - only if we're showing an image and have dimensions
   let imageSizeMeta = "";
   if (showImageMeta) {
-    if (avatarType === "small") {
-      const width = avatarWidth || "45";
-      const height = avatarHeight || "45";
-      imageSizeMeta = `
-<meta property="og:image:width" content="${width}">
-<meta property="og:image:height" content="${height}">`;
-    } else if (avatarType === "large" && avatarWidth && avatarHeight) {
+    // For both small and large avatars, only add size meta if dimensions are provided
+    if (avatarWidth && avatarHeight) {
       imageSizeMeta = `
 <meta property="og:image:width" content="${avatarWidth}">
 <meta property="og:image:height" content="${avatarHeight}">`;
     }
+    // If no dimensions provided for small avatar, don't add any size meta (unrestricted)
   }
 
   // Build title meta tag only if we want to show title
