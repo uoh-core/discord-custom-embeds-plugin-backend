@@ -110,30 +110,40 @@ app.get("/embed", (req, res) => {
     siteName = "〔 ͟𝀛͟𝀛͟╹͟⌵͟╹͟𝀛͟𝀛͟ 〕";
   }
 
-  const imgUrl = encodedImg
-    ? escapeHtml(decodeURIComponent(encodedImg))
-    : "https://files.catbox.moe/1f995e.webp";
+  // FIXED: Only use avatar if type is not "none"
+  let finalImageUrl;
+  let showImageMeta = true;
 
-  // Use custom avatar if provided and type is not "none"
-  const finalImageUrl =
-    avatarType !== "none" && avatarUrl ? decodeURIComponent(avatarUrl) : imgUrl;
+  if (avatarType === "none") {
+    // No avatar - use the default image URL from encodedImg or fallback
+    finalImageUrl = encodedImg
+      ? escapeHtml(decodeURIComponent(encodedImg))
+      : "https://files.catbox.moe/1f995e.webp";
+    showImageMeta = !!encodedImg; // Only show image meta if we have an image
+  } else {
+    // Avatar type is small or large - use custom avatar URL
+    finalImageUrl = avatarUrl ? decodeURIComponent(avatarUrl) : "https://files.catbox.moe/1f995e.webp";
+    showImageMeta = true;
+  }
 
   // Determine Twitter card type based on avatar type
   const twitterCardType =
     avatarType === "large" ? "summary_large_image" : "summary";
 
-  // Build image size meta tags
+  // Build image size meta tags - only if we're showing an image and have dimensions
   let imageSizeMeta = "";
-  if (avatarType === "small") {
-    const width = avatarWidth || "45";
-    const height = avatarHeight || "45";
-    imageSizeMeta = `
+  if (showImageMeta) {
+    if (avatarType === "small") {
+      const width = avatarWidth || "45";
+      const height = avatarHeight || "45";
+      imageSizeMeta = `
 <meta property="og:image:width" content="${width}">
 <meta property="og:image:height" content="${height}">`;
-  } else if (avatarType === "large" && avatarWidth && avatarHeight) {
-    imageSizeMeta = `
+    } else if (avatarType === "large" && avatarWidth && avatarHeight) {
+      imageSizeMeta = `
 <meta property="og:image:width" content="${avatarWidth}">
 <meta property="og:image:height" content="${avatarHeight}">`;
+    }
   }
 
   // Build title meta tag only if we want to show title
@@ -146,6 +156,11 @@ app.get("/embed", (req, res) => {
     ? `<meta property="og:site_name" content="${siteName}">`
     : "";
 
+  // Build image meta tag only if we want to show image
+  const imageMeta = showImageMeta
+    ? `<meta property="og:image" content="${finalImageUrl}">`
+    : "";
+
   res.setHeader("Content-Type", "text/html");
 
   res.send(`<!DOCTYPE html>
@@ -155,7 +170,7 @@ app.get("/embed", (req, res) => {
 ${titleMeta}
 ${siteNameMeta}
 <meta property="og:description" content="${text}">
-<meta property="og:image" content="${finalImageUrl}">
+${imageMeta}
 ${imageSizeMeta}
 <meta name="theme-color" content="#${color}">
 <meta name="twitter:card" content="${twitterCardType}">
@@ -179,7 +194,7 @@ img {
 <body>
 ${title ? `<h1>${title}</h1>` : ""}
 <p>${text}</p>
-<img src="${finalImageUrl}" alt="Embed Image">
+${showImageMeta ? `<img src="${finalImageUrl}" alt="Embed Image">` : ""}
 </body>
 </html>`);
 });
